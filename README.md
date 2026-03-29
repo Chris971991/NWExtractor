@@ -89,7 +89,7 @@ If auto-detection fails, copy `oo2core_9_win64.dll` from any UE5-based game into
 |---|---|---|
 | Textures | `.dds` (split: `.dds` + `.dds.1` ... `.dds.N`) | PNG / TGA |
 | Normal Maps | `.dds` (auto-detected by `_ddna`, `_normal` suffix) | TGA |
-| Models | `.cgf`, `.cga`, `.skin`, `.chr` | *Coming soon — FBX* |
+| Models | `.cgf`, `.cga`, `.skin`, `.chr` | OBJ (FBX/glTF coming soon) |
 | Animations | `.caf`, `.anm` | *Coming soon — FBX* |
 | Materials | `.mtl` (XML) | *Coming soon — UE5 JSON* |
 | Audio | `.wem`, `.bnk` | Raw extraction |
@@ -124,7 +124,8 @@ Levels     → Dungeons, Arenas, Raids (via sharedassets)
 - [x] AZCS (Amazon Compressed Stream) unwrapping
 - [x] GUI with smart content browser
 - [x] DDS → PNG/TGA texture conversion (with split mip reassembly)
-- [ ] CGF/CGA/SKIN → FBX model conversion
+- [x] CGF/CGA/SKIN → OBJ model conversion (static meshes)
+- [ ] CGF/SKIN → FBX/glTF model conversion (skeletal meshes with bone weights)
 - [ ] CAF → FBX animation conversion
 - [ ] MTL → UE5 material instance generation
 - [ ] Level/map entity placement export

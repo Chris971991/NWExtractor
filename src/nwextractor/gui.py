@@ -338,10 +338,18 @@ class NWExtractorApp(ctk.CTk):
             checkbox_width=18, checkbox_height=18,
         ).pack(side="left", padx=(0, 12))
 
-        ctk.CTkLabel(
-            filter_row3, text="(textures are converted during extraction)",
-            font=ctk.CTkFont(size=10), text_color=TEXT_DIM,
-        ).pack(side="left")
+        # Separator
+        ctk.CTkLabel(filter_row3, text="  |  ",
+                     font=ctk.CTkFont(size=11), text_color="#444",
+                     ).pack(side="left")
+
+        self._convert_models_var = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            filter_row3, text="Convert models to OBJ",
+            variable=self._convert_models_var,
+            font=ctk.CTkFont(size=11), fg_color=ACCENT, hover_color=ACCENT_HOVER,
+            checkbox_width=18, checkbox_height=18,
+        ).pack(side="left", padx=(0, 4))
 
         # ── Main split: tree (left) + log (right) ──
         main = ctk.CTkFrame(self, fg_color="transparent")
@@ -896,8 +904,10 @@ class NWExtractorApp(ctk.CTk):
     def _run_extraction(self, selected_files: list[FileEntry], output_dir: Path, oodle_path: Path):
         from nwextractor.pak.azcs import is_azcs, decompress_azcs
         from nwextractor.convert.textures import convert_texture, FORMAT_PNG, FORMAT_TGA
+        from nwextractor.convert.models import convert_model
 
         convert_dds = self._convert_textures_var.get()
+        convert_models = self._convert_models_var.get()
         tex_fmt_str = self._texture_format_var.get()
         auto_normals = self._auto_normals_var.get()
 
@@ -932,6 +942,7 @@ class NWExtractorApp(ctk.CTk):
             done = 0
             errors = 0
             dds_headers: list[Path] = []  # Track DDS files for phase 2
+            model_files: list[Path] = []  # Track model files for phase 3
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -978,6 +989,8 @@ class NWExtractorApp(ctk.CTk):
 
                     if out_path.suffix.lower() == ".dds":
                         dds_headers.append(out_path)
+                    elif convert_models and out_path.suffix.lower() in (".cgf", ".cga", ".skin"):
+                        model_files.append(out_path)
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1057,6 +1070,22 @@ class NWExtractorApp(ctk.CTk):
                         self._log(f"  CONVERT FAIL {dds_out.name}: {e}")
 
                 self._log(f"Converted {converted:,}/{len(dds_headers):,} textures to {tex_fmt.upper()}")
+
+            # --- Phase 3: Convert models to OBJ ---
+            if convert_models and model_files and not self._stop_requested:
+                self._log(f"\n--- Phase 3: Converting {len(model_files)} models to OBJ ---")
+                models_converted = 0
+                for i, model_path in enumerate(model_files):
+                    if self._stop_requested:
+                        break
+                    self._set_status(f"Converting model {i+1:,}/{len(model_files):,}")
+                    try:
+                        result = convert_model(model_path, model_path.parent)
+                        if result:
+                            models_converted += 1
+                    except Exception as e:
+                        self._log(f"  MODEL FAIL {model_path.name}: {e}")
+                self._log(f"Converted {models_converted:,}/{len(model_files):,} models to OBJ")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")
