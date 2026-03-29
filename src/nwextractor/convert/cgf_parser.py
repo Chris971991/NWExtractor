@@ -396,55 +396,49 @@ class CgfParser:
                 mesh.bone_weights.append(bw)
 
     def _parse_compiled_bones(self, chunk: ChunkTableEntry) -> list[Bone]:
-        """Parse CompiledBones chunk (0x2000)."""
+        """Parse CompiledBones chunk (0x2000).
+
+        New World / Lumberyard compiled bones structure (v0x800):
+          32-byte chunk header (zeros/flags)
+          N × 584-byte bone entries:
+            +0:    controller_id (4 bytes)
+            +4:    parent_index (int32, -1 = root)
+            +8:    num_children (int32)
+            +12:   AABB min (3 floats) + AABB max (3 floats) = 24 bytes
+            +36:   physics data (various)
+            +312:  bone name (256 bytes, null-terminated)
+            +568:  trailing data (16 bytes)
+        """
         off = chunk.offset
         bones = []
 
         if chunk.version == 0x0800:
-            # Each bone entry in v0x0800 is typically 584 bytes
-            # But let's calculate from chunk size
-            # Bone format: controller_id(4) + physics(4*8=32) + geometry(4*8=32) +
-            #   name (256) + parent_index(4) + num_children(4) + controller_id(4) +
-            #   props(32) + phys_geometry...
-            # Actually the exact size varies. Let's use a simpler approach:
-            # Try 584-byte entries first, fall back to detection
-            bone_sizes = [584, 588, 152, 156]
-            bone_size = 0
-            for bs in bone_sizes:
-                if bs > 0 and chunk.size % bs == 0:
-                    bone_size = bs
-                    break
+            # Try multiple known entry sizes with header
+            for header_size, entry_size, name_off in [(32, 584, 312), (0, 584, 312), (0, 588, 320), (0, 152, 32)]:
+                payload = chunk.size - header_size
+                if payload > 0 and entry_size > 0 and payload % entry_size == 0:
+                    n_bones = payload // entry_size
+                    test_bones = []
+                    valid = True
+                    for i in range(n_bones):
+                        p = off + header_size + i * entry_size
+                        name = self._string(p + name_off, min(256, entry_size - name_off))
+                        if not name or not name.isprintable():
+                            valid = False
+                            break
+                        bone = Bone()
+                        bone.name = name
+                        bone.parent_index = self._i32(p + 4)
+                        test_bones.append(bone)
+                    if valid and test_bones:
+                        bones = test_bones
+                        break
 
-            if bone_size == 0:
-                return bones
-
-            n_bones = chunk.size // bone_size
-            for i in range(n_bones):
-                p = off + i * bone_size
-                bone = Bone()
-                # The controller ID is first, then comes physics info
-                # Bone name is typically at a known offset within the entry
-                # For 584-byte entries: name starts at offset 32
-                if bone_size >= 584:
-                    bone.name = self._string(p + 32, 256)
-                    bone.parent_index = self._i32(p + 32 + 256)
-                elif bone_size >= 152:
-                    bone.name = self._string(p + 32, 64)
-                    bone.parent_index = self._i32(p + 32 + 64)
-                bones.append(bone)
-
-        elif chunk.version == 0x0801 or chunk.version == 0x0900:
-            # Newer bone format — try 152-byte entries
-            if chunk.size >= 152:
-                bone_size = 152
-                if chunk.size % bone_size != 0:
-                    bone_size = 156
-                n_bones = chunk.size // bone_size if bone_size > 0 else 0
-                for i in range(n_bones):
-                    p = off + i * bone_size
-                    bone = Bone()
-                    bone.name = self._string(p + 32, 64)
-                    bone.parent_index = self._i32(p + 32 + 64)
-                    bones.append(bone)
+            # Fix parent indices: CryEngine stores parent as offset, not index
+            # For this version, -1 means root. Non-negative values are relative
+            # bone offsets that need converting to indices.
+            # Actually in New World, parent -1 = no parent, otherwise it seems
+            # to store the parent bone index directly or as -1.
+            # For now, keep as-is and handle in exporter.
 
         return bones

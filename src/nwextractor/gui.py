@@ -345,10 +345,20 @@ class NWExtractorApp(ctk.CTk):
 
         self._convert_models_var = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(
-            filter_row3, text="Convert models to OBJ",
+            filter_row3, text="Convert models to",
             variable=self._convert_models_var,
             font=ctk.CTkFont(size=11), fg_color=ACCENT, hover_color=ACCENT_HOVER,
             checkbox_width=18, checkbox_height=18,
+        ).pack(side="left", padx=(0, 4))
+
+        self._model_format_var = ctk.StringVar(value="GLB")
+        ctk.CTkOptionMenu(
+            filter_row3, variable=self._model_format_var,
+            values=["GLB", "OBJ"],
+            font=ctk.CTkFont(size=11), height=28, width=80,
+            fg_color=BG_INPUT, button_color=ACCENT,
+            button_hover_color=ACCENT_HOVER,
+            dropdown_fg_color=BG_PANEL,
         ).pack(side="left", padx=(0, 4))
 
         # ── Main split: tree (left) + log (right) ──
@@ -1080,7 +1090,8 @@ class NWExtractorApp(ctk.CTk):
                         break
                     self._set_status(f"Converting model {i+1:,}/{len(model_files):,}")
                     try:
-                        result = convert_model(model_path, model_path.parent)
+                        model_fmt = self._model_format_var.get().lower()
+                        result = convert_model(model_path, model_path.parent, output_format=model_fmt)
                         if result:
                             models_converted += 1
                     except Exception as e:

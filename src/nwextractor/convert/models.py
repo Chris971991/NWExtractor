@@ -1,7 +1,7 @@
-"""Model conversion: CGF/CGA/SKIN → OBJ (and later FBX/glTF).
+"""Model conversion: CGF/CGA/SKIN → OBJ or glTF/GLB.
 
-OBJ export handles static meshes immediately. FBX/glTF for skeletal meshes
-is planned for Phase 3b.
+- OBJ: simple static meshes (no skeleton)
+- glTF/GLB: skeletal meshes with bone weights (UE5-ready)
 """
 
 from pathlib import Path
@@ -9,13 +9,13 @@ from pathlib import Path
 from nwextractor.convert.cgf_parser import CgfFile, CgfParser, MeshData
 
 
-def convert_model(src: Path, dst_dir: Path, output_format: str = "obj") -> Path | None:
-    """Convert a CGF/CGA/SKIN file to OBJ.
+def convert_model(src: Path, dst_dir: Path, output_format: str = "glb") -> Path | None:
+    """Convert a CGF/CGA/SKIN file to OBJ or GLB.
 
     Args:
         src: Source .cgf/.cga/.skin file.
         dst_dir: Output directory.
-        output_format: "obj" (more formats coming).
+        output_format: "glb" (default, with skeleton), "obj" (static only).
 
     Returns:
         Path to converted file, or None on failure.
@@ -30,7 +30,11 @@ def convert_model(src: Path, dst_dir: Path, output_format: str = "obj") -> Path 
 
     dst_dir.mkdir(parents=True, exist_ok=True)
 
-    if output_format == "obj":
+    if output_format == "glb":
+        from nwextractor.convert.gltf_export import export_glb
+        out_path = dst_dir / src.with_suffix(".glb").name
+        return export_glb(cgf, out_path)
+    elif output_format == "obj":
         return _export_obj(cgf, src, dst_dir)
 
     return None
