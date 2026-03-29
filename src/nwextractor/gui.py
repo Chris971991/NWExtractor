@@ -955,8 +955,10 @@ class NWExtractorApp(ctk.CTk):
             model_files: list[Path] = []  # Track model files for phase 3
             anim_files: list[Path] = []   # Track animation files for phase 4
             mtl_files: list[Path] = []    # Track material files for phase 5
+            cdf_files: list[Path] = []        # Track character definitions
             heightmap_files: list[Path] = []  # Track heightmaps for phase 6
             entity_files: list[Path] = []     # Track entity placement files
+            loc_files: list[Path] = []        # Track localization files
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -1009,10 +1011,14 @@ class NWExtractorApp(ctk.CTk):
                         anim_files.append(out_path)
                     elif convert_models and out_path.suffix.lower() == ".mtl":
                         mtl_files.append(out_path)
+                    elif convert_models and out_path.suffix.lower() == ".cdf":
+                        cdf_files.append(out_path)
                     elif out_path.suffix.lower() == ".heightmap":
                         heightmap_files.append(out_path)
                     elif out_path.name == "mission0.entities_xml":
                         entity_files.append(out_path)
+                    elif out_path.name.endswith('.loc.xml'):
+                        loc_files.append(out_path)
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1175,6 +1181,32 @@ class NWExtractorApp(ctk.CTk):
                     except Exception as e:
                         self._log(f"  ENTITY FAIL {ent_path.name}: {e}")
                 self._log(f"Converted {ent_converted:,}/{len(entity_files):,} entity files to CSV+JSON")
+
+            # --- Phase 8: Convert character definitions to JSON ---
+            if convert_models and cdf_files and not self._stop_requested:
+                from nwextractor.convert.gamedata import convert_cdf
+                self._log(f"\n--- Phase 8: Converting {len(cdf_files)} character definitions ---")
+                cdf_ok = 0
+                for cdf_path in cdf_files:
+                    try:
+                        result = convert_cdf(cdf_path, cdf_path.parent)
+                        if result: cdf_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {cdf_ok:,}/{len(cdf_files):,} character definitions to JSON")
+
+            # --- Phase 9: Convert localization to JSON ---
+            if loc_files and not self._stop_requested:
+                from nwextractor.convert.gamedata import convert_localization
+                self._log(f"\n--- Phase 9: Converting {len(loc_files)} localization files ---")
+                loc_ok = 0
+                for loc_path in loc_files:
+                    try:
+                        result = convert_localization(loc_path, loc_path.parent)
+                        if result: loc_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {loc_ok:,}/{len(loc_files):,} localization files to JSON")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")

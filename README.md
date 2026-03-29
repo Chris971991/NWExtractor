@@ -92,8 +92,18 @@ If auto-detection fails, copy `oo2core_9_win64.dll` from any UE5-based game into
 | Models | `.cgf`, `.cga`, `.skin`, `.chr` | GLB (glTF binary) or OBJ |
 | Animations | `.caf`, `.anm` | GLB (glTF binary with keyframes) |
 | Materials | `.mtl` (XML) | JSON manifest (UE5 material setup) |
-| Audio | `.wem`, `.bnk` | Raw extraction |
+| Characters | `.cdf` (XML character definitions) | JSON (skeleton + skin + attachments) |
+| Localization | `.loc.xml` (string tables) | JSON (key-value string tables) |
 | Heightmaps | `.heightmap` (LZW TIFF) | R16 (UE5 Landscape) or PNG |
+| Entity Placement | `mission0.entities_xml` | CSV + JSON (position, rotation, scale) |
+| Game Data | `.datasheet` (binary data tables) | Raw extraction |
+| Audio | `.wem`, `.bnk` | Raw extraction |
+| Vegetation | `.vegetation` (placement data) | Raw extraction |
+| Dynamic Slices | `.dynamicslice` (prefabs) | Raw extraction |
+| Blend Spaces | `.bspace`, `.adb` (animation config) | Raw extraction |
+| Cloth | `.cloth` (cloth simulation) | Raw extraction |
+| Navigation | `.bai` (AI navmesh) | Raw extraction |
+| Scripts | `.lua`, `.luac` | Raw extraction |
 
 ## New World Folder Structure
 
@@ -130,6 +140,9 @@ Levels     → Dungeons, Arenas, Raids (via sharedassets)
 - [x] MTL → UE5 material JSON manifests (texture slots, PBR properties)
 - [x] Heightmap conversion for UE5 Landscape (TIFF → R16/PNG)
 - [x] Level entity placement export (CSV + JSON with transforms)
+- [x] Character definitions (CDF → JSON with skeleton/skin/attachments)
+- [x] Localization strings (loc.xml → JSON string tables)
+- [x] Expanded asset catalog (102 file types recognized across 17 categories)
 
 ## Credits
 
