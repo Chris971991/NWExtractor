@@ -23,13 +23,18 @@ Extract and convert **New World** game assets for **Unreal Engine 5** import.
 
 ## Installation
 
+### Standalone EXE (recommended)
+
+Download the latest release from the [Releases page](https://github.com/Chris971991/NWExtractor/releases) — no Python needed.
+
+The app automatically checks for updates on startup.
+
 ### Requirements
 
-- **Python 3.10+** (64-bit)
-- **Windows** (Oodle DLL is Windows-only)
+- **Windows 10/11** (64-bit)
 - **New World** installed via Steam
 
-### Install
+### From Source (developers)
 
 ```bash
 git clone https://github.com/Chris971991/NWExtractor.git

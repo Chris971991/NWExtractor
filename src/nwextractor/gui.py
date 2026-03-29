@@ -186,6 +186,24 @@ class NWExtractorApp(ctk.CTk):
         self._filter_nodes: list[DirNode | None] = [None, None, None, None]
 
         self._build_ui()
+        self.after(500, self._check_updates)
+
+    def _check_updates(self):
+        """Check for updates in background thread."""
+        import threading
+        def _do_check():
+            from nwextractor.updater import check_for_updates
+            result = check_for_updates()
+            if result and result["update_available"]:
+                self.after(0, lambda: self._show_update(result))
+        threading.Thread(target=_do_check, daemon=True).start()
+
+    def _show_update(self, info: dict):
+        self._log(f"UPDATE AVAILABLE: v{info['latest_version']} (you have v{info['current_version']})")
+        self._log(f"  Download: {info['download_url']}")
+        if info.get('release_notes'):
+            self._log(f"  Notes: {info['release_notes'][:200]}")
+        self._log("")
 
     def _build_ui(self):
         # ── Header ──

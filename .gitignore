@@ -26,6 +26,9 @@ venv/
 .venv/
 env/
 
+# PyInstaller
+*.spec
+
 # Claude
 CLAUDE.md
 nul
