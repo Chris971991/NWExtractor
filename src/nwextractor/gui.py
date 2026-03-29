@@ -1087,27 +1087,43 @@ class NWExtractorApp(ctk.CTk):
 
                 self._log(f"Converted {converted:,}/{len(dds_headers):,} textures to {tex_fmt.upper()}")
 
-            # --- Phase 3: Convert models to OBJ ---
+            # --- Phase 3: Convert materials to UE5 JSON (before models, to avoid .mtl conflicts) ---
+            if convert_models and mtl_files and not self._stop_requested:
+                from nwextractor.convert.materials import convert_material
+                self._log(f"\n--- Phase 3: Converting {len(mtl_files)} materials ---")
+                mtls_converted = 0
+                for i, mtl_path in enumerate(mtl_files):
+                    if self._stop_requested:
+                        break
+                    try:
+                        result = convert_material(mtl_path, mtl_path.parent)
+                        if result:
+                            mtls_converted += 1
+                    except Exception as e:
+                        self._log(f"  MTL FAIL {mtl_path.name}: {e}")
+                self._log(f"Converted {mtls_converted:,}/{len(mtl_files):,} materials to JSON")
+
+            # --- Phase 4: Convert models ---
             if convert_models and model_files and not self._stop_requested:
-                self._log(f"\n--- Phase 3: Converting {len(model_files)} models to OBJ ---")
+                model_fmt = self._model_format_var.get()
+                self._log(f"\n--- Phase 4: Converting {len(model_files)} models to {model_fmt} ---")
                 models_converted = 0
                 for i, model_path in enumerate(model_files):
                     if self._stop_requested:
                         break
                     self._set_status(f"Converting model {i+1:,}/{len(model_files):,}")
                     try:
-                        model_fmt = self._model_format_var.get().lower()
-                        result = convert_model(model_path, model_path.parent, output_format=model_fmt)
+                        result = convert_model(model_path, model_path.parent, output_format=model_fmt.lower())
                         if result:
                             models_converted += 1
                     except Exception as e:
                         self._log(f"  MODEL FAIL {model_path.name}: {e}")
-                self._log(f"Converted {models_converted:,}/{len(model_files):,} models to {self._model_format_var.get()}")
+                self._log(f"Converted {models_converted:,}/{len(model_files):,} models to {model_fmt}")
 
-            # --- Phase 4: Convert animations to GLB ---
+            # --- Phase 5: Convert animations to GLB ---
             if convert_models and anim_files and not self._stop_requested:
                 from nwextractor.convert.models import convert_animation
-                self._log(f"\n--- Phase 4: Converting {len(anim_files)} animations to GLB ---")
+                self._log(f"\n--- Phase 5: Converting {len(anim_files)} animations to GLB ---")
                 anims_converted = 0
                 for i, anim_path in enumerate(anim_files):
                     if self._stop_requested:
@@ -1120,22 +1136,6 @@ class NWExtractorApp(ctk.CTk):
                     except Exception as e:
                         self._log(f"  ANIM FAIL {anim_path.name}: {e}")
                 self._log(f"Converted {anims_converted:,}/{len(anim_files):,} animations to GLB")
-
-            # --- Phase 5: Convert materials to UE5 JSON ---
-            if convert_models and mtl_files and not self._stop_requested:
-                from nwextractor.convert.materials import convert_material
-                self._log(f"\n--- Phase 5: Converting {len(mtl_files)} materials ---")
-                mtls_converted = 0
-                for i, mtl_path in enumerate(mtl_files):
-                    if self._stop_requested:
-                        break
-                    try:
-                        result = convert_material(mtl_path, mtl_path.parent)
-                        if result:
-                            mtls_converted += 1
-                    except Exception as e:
-                        self._log(f"  MTL FAIL {mtl_path.name}: {e}")
-                self._log(f"Converted {mtls_converted:,}/{len(mtl_files):,} materials to JSON")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")

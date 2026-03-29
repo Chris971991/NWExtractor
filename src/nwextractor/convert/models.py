@@ -43,7 +43,7 @@ def convert_model(src: Path, dst_dir: Path, output_format: str = "glb") -> Path 
 def _export_obj(cgf: CgfFile, src: Path, dst_dir: Path) -> Path | None:
     """Export parsed CGF mesh to Wavefront OBJ format."""
     out_path = dst_dir / src.with_suffix(".obj").name
-    mtl_path = dst_dir / src.with_suffix(".mtl").name
+    mtl_path = dst_dir / (src.stem + "_material.mtl")
 
     lines = []
     lines.append(f"# Exported by NWExtractor from {src.name}")
