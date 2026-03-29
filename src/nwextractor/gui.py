@@ -968,6 +968,7 @@ class NWExtractorApp(ctk.CTk):
             cloth_files: list[Path] = []          # Track cloth sim files
             vegetation_files: list[Path] = []     # Track vegetation placement
             vshapec_files: list[Path] = []        # Track vegetation shapes
+            misc_binary_files: list[tuple[str, Path]] = []  # Track misc binary formats
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -1038,7 +1039,7 @@ class NWExtractorApp(ctk.CTk):
                         surfacemap_files.append(out_path)
                     elif out_path.suffix.lower() == '.distribution':
                         distribution_files.append(out_path)
-                    elif out_path.suffix.lower() in ('.dynamicslice', '.timeline', '.dynamicuicanvas'):
+                    elif out_path.suffix.lower() in ('.dynamicslice', '.timeline', '.dynamicuicanvas', '.uicanvas'):
                         az_binary_files.append(out_path)
                     elif out_path.suffix.lower() == '.cloth':
                         cloth_files.append(out_path)
@@ -1046,6 +1047,24 @@ class NWExtractorApp(ctk.CTk):
                         vegetation_files.append(out_path)
                     elif out_path.suffix.lower() == '.vshapec':
                         vshapec_files.append(out_path)
+                    elif out_path.suffix.lower() in ('.meta', '.metadata', '.aliasasset'):
+                        az_binary_files.append(out_path)
+                    elif out_path.suffix.lower() in ('.grid', '.comb', '.animevents', '.actionlist'):
+                        xml_gamedata_files.append(out_path)
+                    elif out_path.suffix.lower() == '.bnk':
+                        misc_binary_files.append(('bnk', out_path))
+                    elif out_path.suffix.lower() == '.rnr':
+                        misc_binary_files.append(('rnr', out_path))
+                    elif out_path.suffix.lower() == '.cgfheap':
+                        misc_binary_files.append(('cgfheap', out_path))
+                    elif out_path.suffix.lower() == '.waterqt':
+                        misc_binary_files.append(('waterqt', out_path))
+                    elif out_path.suffix.lower() == '.chunks':
+                        misc_binary_files.append(('chunks', out_path))
+                    elif out_path.suffix.lower() == '.musicsheetc':
+                        misc_binary_files.append(('musicsheetc', out_path))
+                    elif out_path.name.endswith('.tractmap.tif'):
+                        misc_binary_files.append(('tractmap', out_path))
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1369,6 +1388,31 @@ class NWExtractorApp(ctk.CTk):
                     except Exception:
                         pass
                 self._log(f"Converted {vs_ok:,}/{len(vshapec_files):,} vegetation shapes to JSON")
+
+            # --- Phase 19: Convert misc binary formats ---
+            if misc_binary_files and not self._stop_requested:
+                from nwextractor.convert.misc_formats import (
+                    convert_bnk, convert_rnr, convert_cgfheap, convert_waterqt,
+                    convert_chunks, convert_musicsheetc, convert_tractmap_tif,
+                )
+                converters = {
+                    'bnk': convert_bnk, 'rnr': convert_rnr, 'cgfheap': convert_cgfheap,
+                    'waterqt': convert_waterqt, 'chunks': convert_chunks,
+                    'musicsheetc': convert_musicsheetc, 'tractmap': convert_tractmap_tif,
+                }
+                self._log(f"\n--- Phase 19: Converting {len(misc_binary_files)} misc files ---")
+                misc_ok = 0
+                for i, (fmt, fpath) in enumerate(misc_binary_files):
+                    if self._stop_requested: break
+                    if i % 500 == 0:
+                        self._set_status(f"Converting misc {i+1:,}/{len(misc_binary_files):,}")
+                    conv_fn = converters.get(fmt)
+                    if conv_fn:
+                        try:
+                            if conv_fn(fpath, fpath.parent): misc_ok += 1
+                        except Exception:
+                            pass
+                self._log(f"Converted {misc_ok:,}/{len(misc_binary_files):,} misc files to JSON")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")
