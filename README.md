@@ -93,7 +93,7 @@ If auto-detection fails, copy `oo2core_9_win64.dll` from any UE5-based game into
 | Animations | `.caf`, `.anm` | GLB (glTF binary with keyframes) |
 | Materials | `.mtl` (XML) | JSON manifest (UE5 material setup) |
 | Audio | `.wem`, `.bnk` | Raw extraction |
-| Heightmaps | `.heightmap` | Raw extraction |
+| Heightmaps | `.heightmap` (LZW TIFF) | R16 (UE5 Landscape) or PNG |
 
 ## New World Folder Structure
 
@@ -128,8 +128,8 @@ Levels     → Dungeons, Arenas, Raids (via sharedassets)
 - [x] CGF/SKIN → GLB model conversion (skeletal meshes with bone weights)
 - [x] CAF → GLB animation conversion (rotation + position keyframes)
 - [x] MTL → UE5 material JSON manifests (texture slots, PBR properties)
+- [x] Heightmap conversion for UE5 Landscape (TIFF → R16/PNG)
 - [ ] Level/map entity placement export
-- [ ] Heightmap conversion for UE5 Landscape
 
 ## Credits
 

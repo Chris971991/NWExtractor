@@ -955,6 +955,7 @@ class NWExtractorApp(ctk.CTk):
             model_files: list[Path] = []  # Track model files for phase 3
             anim_files: list[Path] = []   # Track animation files for phase 4
             mtl_files: list[Path] = []    # Track material files for phase 5
+            heightmap_files: list[Path] = []  # Track heightmaps for phase 6
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -1007,6 +1008,8 @@ class NWExtractorApp(ctk.CTk):
                         anim_files.append(out_path)
                     elif convert_models and out_path.suffix.lower() == ".mtl":
                         mtl_files.append(out_path)
+                    elif out_path.suffix.lower() == ".heightmap":
+                        heightmap_files.append(out_path)
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1136,6 +1139,22 @@ class NWExtractorApp(ctk.CTk):
                     except Exception as e:
                         self._log(f"  ANIM FAIL {anim_path.name}: {e}")
                 self._log(f"Converted {anims_converted:,}/{len(anim_files):,} animations to GLB")
+
+            # --- Phase 6: Convert heightmaps to R16 ---
+            if heightmap_files and not self._stop_requested:
+                from nwextractor.convert.heightmaps import convert_heightmap
+                self._log(f"\n--- Phase 6: Converting {len(heightmap_files)} heightmaps to R16 ---")
+                hm_converted = 0
+                for i, hm_path in enumerate(heightmap_files):
+                    if self._stop_requested:
+                        break
+                    try:
+                        result = convert_heightmap(hm_path, hm_path.parent, output_format="r16")
+                        if result:
+                            hm_converted += 1
+                    except Exception as e:
+                        self._log(f"  HEIGHTMAP FAIL {hm_path.name}: {e}")
+                self._log(f"Converted {hm_converted:,}/{len(heightmap_files):,} heightmaps to R16")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")
