@@ -96,8 +96,9 @@ If auto-detection fails, copy `oo2core_9_win64.dll` from any UE5-based game into
 | Localization | `.loc.xml` (string tables) | JSON (key-value string tables) |
 | Heightmaps | `.heightmap` (LZW TIFF) | R16 (UE5 Landscape) or PNG |
 | Entity Placement | `mission0.entities_xml` | CSV + JSON (position, rotation, scale) |
-| Game Data | `.datasheet` (binary data tables) | Raw extraction |
-| Audio | `.wem`, `.bnk` | Raw extraction |
+| Game Data | `.datasheet` (binary data tables) | JSON + CSV (items, loot, NPCs, quests) |
+| Audio | `.wem` (Wwise audio) | WAV (auto-downloads vgmstream) |
+| Anim Config | `.chrparams`, `.bspace`, `.adb` (XML) | JSON |
 | Vegetation | `.vegetation` (placement data) | Raw extraction |
 | Dynamic Slices | `.dynamicslice` (prefabs) | Raw extraction |
 | Blend Spaces | `.bspace`, `.adb` (animation config) | Raw extraction |
@@ -143,6 +144,9 @@ Levels     → Dungeons, Arenas, Raids (via sharedassets)
 - [x] Character definitions (CDF → JSON with skeleton/skin/attachments)
 - [x] Localization strings (loc.xml → JSON string tables)
 - [x] Expanded asset catalog (102 file types recognized across 17 categories)
+- [x] Datasheets → JSON + CSV (binary game data: items, loot, NPCs, quests)
+- [x] WEM audio → WAV (via auto-downloaded vgmstream)
+- [x] XML game data → JSON (chrparams, blend spaces, anim databases, action lists)
 
 ## Credits
 

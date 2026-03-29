@@ -153,3 +153,61 @@ def convert_localization(src: Path, dst_dir: Path) -> Path | None:
 
     out_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return out_path
+
+
+# ─── Generic XML to JSON converter ───
+# Handles: .chrparams, .bspace, .adb, .regionmat, .animevents, .actionlist
+
+def _xml_to_dict(elem: ET.Element) -> dict | str | list:
+    """Recursively convert an XML element to a dict."""
+    result = {}
+
+    # Add attributes
+    if elem.attrib:
+        result.update(elem.attrib)
+
+    # Add children
+    children_by_tag: dict[str, list] = {}
+    for child in elem:
+        tag = child.tag
+        if tag not in children_by_tag:
+            children_by_tag[tag] = []
+        children_by_tag[tag].append(_xml_to_dict(child))
+
+    for tag, items in children_by_tag.items():
+        if len(items) == 1:
+            result[tag] = items[0]
+        else:
+            result[tag] = items
+
+    # If element has text and no children, return text
+    if elem.text and elem.text.strip() and not children_by_tag:
+        if not result:
+            return elem.text.strip()
+        result["_text"] = elem.text.strip()
+
+    return result
+
+
+def convert_xml_gamedata(src: Path, dst_dir: Path) -> Path | None:
+    """Convert any XML game data file to JSON."""
+    try:
+        content = src.read_bytes()
+        if content[:1] != b'<':
+            return None  # Not XML
+        tree = ET.parse(src)
+        root = tree.getroot()
+    except Exception:
+        return None
+
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    out_path = dst_dir / (src.stem + ".json")
+
+    data = {
+        "source": src.name,
+        "root_tag": root.tag,
+        "data": _xml_to_dict(root),
+    }
+
+    out_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    return out_path

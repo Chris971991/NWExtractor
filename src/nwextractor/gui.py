@@ -959,6 +959,9 @@ class NWExtractorApp(ctk.CTk):
             heightmap_files: list[Path] = []  # Track heightmaps for phase 6
             entity_files: list[Path] = []     # Track entity placement files
             loc_files: list[Path] = []        # Track localization files
+            datasheet_files: list[Path] = []  # Track datasheet files
+            wem_files: list[Path] = []        # Track audio files
+            xml_gamedata_files: list[Path] = []  # Track XML game data
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -1019,6 +1022,12 @@ class NWExtractorApp(ctk.CTk):
                         entity_files.append(out_path)
                     elif out_path.name.endswith('.loc.xml'):
                         loc_files.append(out_path)
+                    elif out_path.suffix.lower() == '.datasheet':
+                        datasheet_files.append(out_path)
+                    elif out_path.suffix.lower() == '.wem':
+                        wem_files.append(out_path)
+                    elif out_path.suffix.lower() in ('.chrparams', '.bspace', '.adb', '.animevents', '.actionlist'):
+                        xml_gamedata_files.append(out_path)
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1207,6 +1216,58 @@ class NWExtractorApp(ctk.CTk):
                     except Exception:
                         pass
                 self._log(f"Converted {loc_ok:,}/{len(loc_files):,} localization files to JSON")
+
+            # --- Phase 10: Convert datasheets to JSON/CSV ---
+            if datasheet_files and not self._stop_requested:
+                from nwextractor.convert.datasheets import convert_datasheet
+                self._log(f"\n--- Phase 10: Converting {len(datasheet_files)} datasheets ---")
+                ds_ok = 0
+                for ds_path in datasheet_files:
+                    if self._stop_requested: break
+                    try:
+                        result = convert_datasheet(ds_path, ds_path.parent)
+                        if result: ds_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {ds_ok:,}/{len(datasheet_files):,} datasheets to JSON+CSV")
+
+            # --- Phase 11: Convert WEM audio to WAV ---
+            if wem_files and not self._stop_requested:
+                from nwextractor.convert.audio import convert_wem, _find_vgmstream, _download_vgmstream
+                vgm = _find_vgmstream()
+                if vgm is None:
+                    vgm = _download_vgmstream(Path.cwd(), log_fn=self._log)
+                if vgm:
+                    self._log(f"\n--- Phase 11: Converting {len(wem_files)} audio files to WAV ---")
+                    wav_ok = 0
+                    for i, wem_path in enumerate(wem_files):
+                        if self._stop_requested: break
+                        if i % 100 == 0:
+                            self._set_status(f"Converting audio {i+1:,}/{len(wem_files):,}")
+                        try:
+                            result = convert_wem(wem_path, wem_path.parent, vgm)
+                            if result:
+                                wav_ok += 1
+                                wem_path.unlink(missing_ok=True)  # Remove original WEM
+                        except Exception:
+                            pass
+                    self._log(f"Converted {wav_ok:,}/{len(wem_files):,} audio files to WAV")
+                else:
+                    self._log("\nSkipping audio conversion - vgmstream not available")
+
+            # --- Phase 12: Convert XML game data to JSON ---
+            if xml_gamedata_files and not self._stop_requested:
+                from nwextractor.convert.gamedata import convert_xml_gamedata
+                self._log(f"\n--- Phase 12: Converting {len(xml_gamedata_files)} game data files ---")
+                gd_ok = 0
+                for gd_path in xml_gamedata_files:
+                    if self._stop_requested: break
+                    try:
+                        result = convert_xml_gamedata(gd_path, gd_path.parent)
+                        if result: gd_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {gd_ok:,}/{len(xml_gamedata_files):,} game data files to JSON")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")
