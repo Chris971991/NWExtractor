@@ -163,3 +163,21 @@ def batch_convert_models(
 
     log(f"Model conversion complete: {converted:,} converted, {errors} errors")
     return converted, errors
+
+
+def convert_animation(src: Path, dst_dir: Path) -> Path | None:
+    """Convert a CAF animation file to GLB."""
+    from nwextractor.convert.caf_parser import CafParser
+    from nwextractor.convert.gltf_export import export_animation_glb
+
+    try:
+        anim = CafParser.from_file(src)
+    except Exception:
+        return None
+
+    if not anim.tracks:
+        return None
+
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    out_path = dst_dir / src.with_suffix(".glb").name
+    return export_animation_glb(anim, out_path)

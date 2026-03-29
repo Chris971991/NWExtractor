@@ -953,6 +953,7 @@ class NWExtractorApp(ctk.CTk):
             errors = 0
             dds_headers: list[Path] = []  # Track DDS files for phase 2
             model_files: list[Path] = []  # Track model files for phase 3
+            anim_files: list[Path] = []   # Track animation files for phase 4
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -1001,6 +1002,8 @@ class NWExtractorApp(ctk.CTk):
                         dds_headers.append(out_path)
                     elif convert_models and out_path.suffix.lower() in (".cgf", ".cga", ".skin"):
                         model_files.append(out_path)
+                    elif convert_models and out_path.suffix.lower() == ".caf":
+                        anim_files.append(out_path)
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1096,7 +1099,24 @@ class NWExtractorApp(ctk.CTk):
                             models_converted += 1
                     except Exception as e:
                         self._log(f"  MODEL FAIL {model_path.name}: {e}")
-                self._log(f"Converted {models_converted:,}/{len(model_files):,} models to OBJ")
+                self._log(f"Converted {models_converted:,}/{len(model_files):,} models to {self._model_format_var.get()}")
+
+            # --- Phase 4: Convert animations to GLB ---
+            if convert_models and anim_files and not self._stop_requested:
+                from nwextractor.convert.models import convert_animation
+                self._log(f"\n--- Phase 4: Converting {len(anim_files)} animations to GLB ---")
+                anims_converted = 0
+                for i, anim_path in enumerate(anim_files):
+                    if self._stop_requested:
+                        break
+                    self._set_status(f"Converting animation {i+1:,}/{len(anim_files):,}")
+                    try:
+                        result = convert_animation(anim_path, anim_path.parent)
+                        if result:
+                            anims_converted += 1
+                    except Exception as e:
+                        self._log(f"  ANIM FAIL {anim_path.name}: {e}")
+                self._log(f"Converted {anims_converted:,}/{len(anim_files):,} animations to GLB")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")

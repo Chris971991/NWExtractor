@@ -1,10 +1,10 @@
-"""Export parsed CGF meshes to glTF 2.0 (.glb binary format).
+"""Export parsed CGF meshes and CAF animations to glTF 2.0 (.glb binary format).
 
 glTF supports:
   - Meshes with vertices, normals, UVs
   - Skeleton joints hierarchy
   - Skin (bone weights per vertex)
-  - Materials (basic PBR)
+  - Animations (rotation + translation keyframes)
 
 UE5 imports glTF natively.
 """
@@ -15,9 +15,13 @@ import struct
 from pathlib import Path
 
 import pygltflib
-from pygltflib import GLTF2, Scene, Node, Mesh, Primitive, Accessor, BufferView, Buffer, Skin
+from pygltflib import (
+    GLTF2, Scene, Node, Mesh, Primitive, Accessor, BufferView, Buffer, Skin,
+    Animation, AnimationChannel, AnimationChannelTarget, AnimationSampler,
+)
 
 from nwextractor.convert.cgf_parser import CgfFile, MeshData, Bone, Vec3
+from nwextractor.convert.caf_parser import CafAnimation
 
 
 def export_glb(cgf: CgfFile, out_path: Path) -> Path | None:
@@ -265,5 +269,139 @@ def export_glb(cgf: CgfFile, out_path: Path) -> Path | None:
     gltf.set_binary_blob(bytes(bin_data))
 
     # Save as .glb
+    gltf.save(str(out_path))
+    return out_path
+
+
+def export_animation_glb(anim: CafAnimation, out_path: Path) -> Path | None:
+    """Export a standalone CAF animation to GLB.
+
+    Creates a skeleton-only GLB with animation tracks.
+    Can be imported into UE5 and retargeted to a matching skeleton.
+    """
+    if not anim.tracks:
+        return None
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    gltf = GLTF2()
+    gltf.scene = 0
+    bin_data = bytearray()
+
+    # Create a node for each bone track (using controller_id as name)
+    gltf.nodes = [Node(name="root")]
+    track_node_map: dict[int, int] = {}  # controller_id → node index
+
+    for track in anim.tracks:
+        node_idx = len(gltf.nodes)
+        track_node_map[track.controller_id] = node_idx
+        gltf.nodes.append(Node(name=f"bone_{track.controller_id:08x}"))
+
+    # Make all bone nodes children of root
+    gltf.nodes[0].children = list(range(1, len(gltf.nodes)))
+    gltf.scenes = [Scene(nodes=[0])]
+
+    # Build animation
+    gltf.bufferViews = []
+    gltf.accessors = []
+    samplers = []
+    channels = []
+
+    for track in anim.tracks:
+        node_idx = track_node_map[track.controller_id]
+
+        # Rotation track
+        if track.rotation_keys:
+            # Time buffer
+            time_offset = len(bin_data)
+            t_min = float("inf")
+            t_max = float("-inf")
+            for key in track.rotation_keys:
+                bin_data += struct.pack("<f", key.time)
+                t_min = min(t_min, key.time)
+                t_max = max(t_max, key.time)
+            time_size = len(bin_data) - time_offset
+
+            # Rotation buffer (quaternion: x, y, z, w)
+            rot_offset = len(bin_data)
+            for key in track.rotation_keys:
+                r = key.rotation
+                bin_data += struct.pack("<ffff", r.x, r.y, r.z, r.w)
+            rot_size = len(bin_data) - rot_offset
+
+            # BufferViews
+            time_bv = len(gltf.bufferViews)
+            gltf.bufferViews.append(BufferView(buffer=0, byteOffset=time_offset, byteLength=time_size))
+            rot_bv = len(gltf.bufferViews)
+            gltf.bufferViews.append(BufferView(buffer=0, byteOffset=rot_offset, byteLength=rot_size))
+
+            # Accessors
+            time_acc = len(gltf.accessors)
+            gltf.accessors.append(Accessor(
+                bufferView=time_bv, componentType=5126,
+                count=len(track.rotation_keys), type="SCALAR",
+                min=[t_min], max=[t_max],
+            ))
+            rot_acc = len(gltf.accessors)
+            gltf.accessors.append(Accessor(
+                bufferView=rot_bv, componentType=5126,
+                count=len(track.rotation_keys), type="VEC4",
+            ))
+
+            # Sampler + Channel
+            sampler_idx = len(samplers)
+            samplers.append(AnimationSampler(input=time_acc, output=rot_acc, interpolation="LINEAR"))
+            channels.append(AnimationChannel(
+                sampler=sampler_idx,
+                target=AnimationChannelTarget(node=node_idx, path="rotation"),
+            ))
+
+        # Position track
+        if track.position_keys:
+            time_offset = len(bin_data)
+            t_min = float("inf")
+            t_max = float("-inf")
+            for key in track.position_keys:
+                bin_data += struct.pack("<f", key.time)
+                t_min = min(t_min, key.time)
+                t_max = max(t_max, key.time)
+            time_size = len(bin_data) - time_offset
+
+            pos_offset = len(bin_data)
+            for key in track.position_keys:
+                p = key.position
+                bin_data += struct.pack("<fff", p.x, p.y, p.z)
+            pos_size = len(bin_data) - pos_offset
+
+            time_bv = len(gltf.bufferViews)
+            gltf.bufferViews.append(BufferView(buffer=0, byteOffset=time_offset, byteLength=time_size))
+            pos_bv = len(gltf.bufferViews)
+            gltf.bufferViews.append(BufferView(buffer=0, byteOffset=pos_offset, byteLength=pos_size))
+
+            time_acc = len(gltf.accessors)
+            gltf.accessors.append(Accessor(
+                bufferView=time_bv, componentType=5126,
+                count=len(track.position_keys), type="SCALAR",
+                min=[t_min], max=[t_max],
+            ))
+            pos_acc = len(gltf.accessors)
+            gltf.accessors.append(Accessor(
+                bufferView=pos_bv, componentType=5126,
+                count=len(track.position_keys), type="VEC3",
+            ))
+
+            sampler_idx = len(samplers)
+            samplers.append(AnimationSampler(input=time_acc, output=pos_acc, interpolation="LINEAR"))
+            channels.append(AnimationChannel(
+                sampler=sampler_idx,
+                target=AnimationChannelTarget(node=node_idx, path="translation"),
+            ))
+
+    if channels:
+        anim_name = Path(anim.file_path).stem if anim.file_path else "animation"
+        gltf.animations = [Animation(name=anim_name, samplers=samplers, channels=channels)]
+
+    gltf.buffers = [Buffer(byteLength=len(bin_data))]
+    gltf.set_binary_blob(bytes(bin_data))
     gltf.save(str(out_path))
     return out_path
