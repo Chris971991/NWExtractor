@@ -962,6 +962,12 @@ class NWExtractorApp(ctk.CTk):
             datasheet_files: list[Path] = []  # Track datasheet files
             wem_files: list[Path] = []        # Track audio files
             xml_gamedata_files: list[Path] = []  # Track XML game data
+            surfacemap_files: list[Path] = []     # Track surface maps
+            distribution_files: list[Path] = []   # Track distribution maps
+            az_binary_files: list[Path] = []      # Track AZ Serialize binary files
+            cloth_files: list[Path] = []          # Track cloth sim files
+            vegetation_files: list[Path] = []     # Track vegetation placement
+            vshapec_files: list[Path] = []        # Track vegetation shapes
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -1026,8 +1032,20 @@ class NWExtractorApp(ctk.CTk):
                         datasheet_files.append(out_path)
                     elif out_path.suffix.lower() == '.wem':
                         wem_files.append(out_path)
-                    elif out_path.suffix.lower() in ('.chrparams', '.bspace', '.adb', '.animevents', '.actionlist'):
+                    elif out_path.suffix.lower() in ('.chrparams', '.bspace', '.adb', '.animevents', '.actionlist', '.regionmat'):
                         xml_gamedata_files.append(out_path)
+                    elif out_path.suffix.lower() == '.surfacemap':
+                        surfacemap_files.append(out_path)
+                    elif out_path.suffix.lower() == '.distribution':
+                        distribution_files.append(out_path)
+                    elif out_path.suffix.lower() in ('.dynamicslice', '.timeline', '.dynamicuicanvas'):
+                        az_binary_files.append(out_path)
+                    elif out_path.suffix.lower() == '.cloth':
+                        cloth_files.append(out_path)
+                    elif out_path.suffix.lower() == '.vegetation':
+                        vegetation_files.append(out_path)
+                    elif out_path.suffix.lower() == '.vshapec':
+                        vshapec_files.append(out_path)
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1268,6 +1286,89 @@ class NWExtractorApp(ctk.CTk):
                     except Exception:
                         pass
                 self._log(f"Converted {gd_ok:,}/{len(xml_gamedata_files):,} game data files to JSON")
+
+            # --- Phase 13: Convert surface maps to PNG ---
+            if surfacemap_files and not self._stop_requested:
+                from nwextractor.convert.terrain import convert_surfacemap
+                self._log(f"\n--- Phase 13: Converting {len(surfacemap_files)} surface maps ---")
+                sm_ok = 0
+                for sm_path in surfacemap_files:
+                    if self._stop_requested: break
+                    try:
+                        result = convert_surfacemap(sm_path, sm_path.parent)
+                        if result: sm_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {sm_ok:,}/{len(surfacemap_files):,} surface maps to PNG")
+
+            # --- Phase 14: Convert distribution maps ---
+            if distribution_files and not self._stop_requested:
+                from nwextractor.convert.terrain import convert_distribution
+                self._log(f"\n--- Phase 14: Converting {len(distribution_files)} distribution maps ---")
+                dist_ok = 0
+                for dist_path in distribution_files:
+                    if self._stop_requested: break
+                    try:
+                        result = convert_distribution(dist_path, dist_path.parent)
+                        if result: dist_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {dist_ok:,}/{len(distribution_files):,} distribution maps to JSON")
+
+            # --- Phase 15: Convert AZ Serialize binary files ---
+            if az_binary_files and not self._stop_requested:
+                from nwextractor.convert.az_deserialize import deserialize_az_binary
+                self._log(f"\n--- Phase 15: Converting {len(az_binary_files)} binary data files ---")
+                az_ok = 0
+                for i, az_path in enumerate(az_binary_files):
+                    if self._stop_requested: break
+                    if i % 500 == 0:
+                        self._set_status(f"Converting binary data {i+1:,}/{len(az_binary_files):,}")
+                    try:
+                        result = deserialize_az_binary(az_path, az_path.parent)
+                        if result: az_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {az_ok:,}/{len(az_binary_files):,} binary data files to JSON")
+
+            # --- Phase 16: Convert cloth simulation data ---
+            if cloth_files and not self._stop_requested:
+                from nwextractor.convert.binary_formats import convert_cloth
+                self._log(f"\n--- Phase 16: Converting {len(cloth_files)} cloth files ---")
+                cloth_ok = 0
+                for cloth_path in cloth_files:
+                    if self._stop_requested: break
+                    try:
+                        if convert_cloth(cloth_path, cloth_path.parent): cloth_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {cloth_ok:,}/{len(cloth_files):,} cloth files to JSON")
+
+            # --- Phase 17: Convert vegetation placement ---
+            if vegetation_files and not self._stop_requested:
+                from nwextractor.convert.binary_formats import convert_vegetation
+                self._log(f"\n--- Phase 17: Converting {len(vegetation_files)} vegetation files ---")
+                veg_ok = 0
+                for veg_path in vegetation_files:
+                    if self._stop_requested: break
+                    try:
+                        if convert_vegetation(veg_path, veg_path.parent): veg_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {veg_ok:,}/{len(vegetation_files):,} vegetation files to JSON")
+
+            # --- Phase 18: Convert vegetation shapes ---
+            if vshapec_files and not self._stop_requested:
+                from nwextractor.convert.binary_formats import convert_vshapec
+                self._log(f"\n--- Phase 18: Converting {len(vshapec_files)} vegetation shapes ---")
+                vs_ok = 0
+                for vs_path in vshapec_files:
+                    if self._stop_requested: break
+                    try:
+                        if convert_vshapec(vs_path, vs_path.parent): vs_ok += 1
+                    except Exception:
+                        pass
+                self._log(f"Converted {vs_ok:,}/{len(vshapec_files):,} vegetation shapes to JSON")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")

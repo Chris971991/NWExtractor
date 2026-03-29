@@ -99,10 +99,13 @@ If auto-detection fails, copy `oo2core_9_win64.dll` from any UE5-based game into
 | Game Data | `.datasheet` (binary data tables) | JSON + CSV (items, loot, NPCs, quests) |
 | Audio | `.wem` (Wwise audio) | WAV (auto-downloads vgmstream) |
 | Anim Config | `.chrparams`, `.bspace`, `.adb` (XML) | JSON |
+| Surface Maps | `.surfacemap` | PNG + material manifest JSON |
+| Distribution | `.distribution` | JSON (vegetation categories) |
+| Region Materials | `.regionmat` (XML) | JSON |
 | Vegetation | `.vegetation` (placement data) | Raw extraction |
-| Dynamic Slices | `.dynamicslice` (prefabs) | Raw extraction |
-| Blend Spaces | `.bspace`, `.adb` (animation config) | Raw extraction |
+| Dynamic Slices | `.dynamicslice` (prefabs) | Raw extraction (AZ Serialize binary) |
 | Cloth | `.cloth` (cloth simulation) | Raw extraction |
+| Timeline | `.timeline` (sequencer) | Raw extraction |
 | Navigation | `.bai` (AI navmesh) | Raw extraction |
 | Scripts | `.lua`, `.luac` | Raw extraction |
 
@@ -146,7 +149,9 @@ Levels     → Dungeons, Arenas, Raids (via sharedassets)
 - [x] Expanded asset catalog (102 file types recognized across 17 categories)
 - [x] Datasheets → JSON + CSV (binary game data: items, loot, NPCs, quests)
 - [x] WEM audio → WAV (via auto-downloaded vgmstream)
-- [x] XML game data → JSON (chrparams, blend spaces, anim databases, action lists)
+- [x] XML game data → JSON (chrparams, blend spaces, anim databases, action lists, region materials)
+- [x] Surface maps → PNG + material manifest
+- [x] Distribution maps → JSON (vegetation categories)
 
 ## Credits
 
