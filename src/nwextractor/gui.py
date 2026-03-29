@@ -23,16 +23,33 @@ from nwextractor.pak.catalog import (
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-ACCENT = "#D4912A"
-ACCENT_HOVER = "#E5A33B"
-BG_DARK = "#1A1A2E"
-BG_PANEL = "#16213E"
-BG_INPUT = "#0F3460"
-BG_LOG = "#0D1117"
-BG_TREE = "#0D1117"
-TEXT_COLOR = "#E0E0E0"
-TEXT_DIM = "#888"
-GREEN = "#2EA043"
+# ─── New World Aeternum Color Palette ───
+# Inspired by the game's dark fantasy colonial aesthetic
+GOLD = "#C8A84E"           # Primary gold accent
+GOLD_BRIGHT = "#E2C87C"    # Hover/highlight gold
+GOLD_DIM = "#8B7340"       # Muted gold for secondary text
+GOLD_DARK = "#5C4A2A"      # Dark gold for borders
+BG_DARK = "#0A0E17"        # Deep dark background (almost black)
+BG_PANEL = "#111827"       # Panel background
+BG_PANEL_ALT = "#1A2332"   # Alternate panel (slightly lighter)
+BG_INPUT = "#1E293B"       # Input field background
+BG_LOG = "#080C14"         # Log area (darkest)
+BG_TREE = "#0D1219"        # Tree view background
+BG_HEADER = "#0F1520"      # Header bar
+BORDER = "#2A3547"         # Subtle borders
+TEXT_COLOR = "#E8D5B5"     # Warm parchment text
+TEXT_DIM = "#7B6F5E"       # Muted text
+TEXT_BRIGHT = "#FFF5E1"    # Bright text
+GREEN = "#4A9B5A"          # Success green
+GREEN_HOVER = "#5CB86C"
+RED = "#8B2020"            # Danger red
+RED_HOVER = "#A83232"
+BLUE_BTN = "#2A5FAA"       # Scan button
+BLUE_HOVER = "#3872C4"
+
+# Legacy aliases for existing code
+ACCENT = GOLD
+ACCENT_HOVER = GOLD_BRIGHT
 
 ALL = "All"
 
@@ -160,13 +177,23 @@ def _configure_tree_style():
     style.configure("Dark.Treeview",
                      background=BG_TREE, foreground=TEXT_COLOR,
                      fieldbackground=BG_TREE, borderwidth=0,
-                     font=("Segoe UI", 10), rowheight=24)
+                     font=("Georgia", 10), rowheight=26)
     style.configure("Dark.Treeview.Heading",
-                     background=BG_PANEL, foreground=ACCENT,
-                     font=("Segoe UI", 10, "bold"), borderwidth=0)
+                     background=BG_PANEL_ALT, foreground=GOLD,
+                     font=("Georgia", 10, "bold"), borderwidth=0,
+                     relief="flat")
     style.map("Dark.Treeview",
-              background=[("selected", "#1F3A60")],
-              foreground=[("selected", "#FFFFFF")])
+              background=[("selected", GOLD_DARK)],
+              foreground=[("selected", TEXT_BRIGHT)])
+    style.configure("Dark.Treeview", highlightthickness=0)
+
+# Fonts used throughout the app
+FONT_TITLE = ("Georgia", 22, "bold")      # Main title
+FONT_SUBTITLE = ("Georgia", 12)            # Subtitle
+FONT_HEADING = ("Georgia", 13, "bold")     # Section headings
+FONT_BODY = ("Segoe UI", 11)              # Body text
+FONT_SMALL = ("Segoe UI", 10)             # Small text
+FONT_MONO = ("Consolas", 10)              # Log/code
 
 
 class NWExtractorApp(ctk.CTk):
@@ -206,21 +233,47 @@ class NWExtractorApp(ctk.CTk):
         self._log("")
 
     def _build_ui(self):
-        # ── Header ──
-        header = ctk.CTkFrame(self, fg_color=BG_PANEL, corner_radius=0, height=50)
+        # ── Grand Header ──
+        header = ctk.CTkFrame(self, fg_color=BG_HEADER, corner_radius=0, height=70)
         header.pack(fill="x")
         header.pack_propagate(False)
 
-        ctk.CTkLabel(header, text="NWExtractor",
-                     font=ctk.CTkFont(size=20, weight="bold"), text_color=ACCENT,
-                     ).pack(side="left", padx=16, pady=6)
-        ctk.CTkLabel(header, text="New World Asset Extractor for UE5",
-                     font=ctk.CTkFont(size=11), text_color=TEXT_DIM,
-                     ).pack(side="left", padx=4)
+        # Gold decorative line top
+        ctk.CTkFrame(self, fg_color=GOLD_DARK, height=2, corner_radius=0).pack(fill="x")
+
+        title_frame = ctk.CTkFrame(header, fg_color="transparent")
+        title_frame.pack(side="left", padx=20, pady=8)
+
+        ctk.CTkLabel(title_frame, text="\u2726  NWExtractor",
+                     font=ctk.CTkFont(family="Georgia", size=24, weight="bold"),
+                     text_color=GOLD,
+                     ).pack(side="left")
+
+        subtitle_frame = ctk.CTkFrame(title_frame, fg_color="transparent")
+        subtitle_frame.pack(side="left", padx=(12, 0))
+        ctk.CTkLabel(subtitle_frame, text="New World: Aeternum",
+                     font=ctk.CTkFont(family="Georgia", size=13, weight="bold"),
+                     text_color=GOLD_DIM,
+                     ).pack(anchor="sw")
+        ctk.CTkLabel(subtitle_frame, text="Asset Extractor for Unreal Engine 5",
+                     font=ctk.CTkFont(family="Segoe UI", size=10),
+                     text_color=TEXT_DIM,
+                     ).pack(anchor="nw")
+
+        # Version badge
+        from nwextractor import __version__
+        ctk.CTkLabel(header, text=f"v{__version__}",
+                     font=ctk.CTkFont(size=10), text_color=GOLD_DARK,
+                     fg_color=BG_PANEL_ALT, corner_radius=4,
+                     width=50, height=20,
+                     ).pack(side="right", padx=20)
+
+        # Gold decorative line bottom
+        ctk.CTkFrame(self, fg_color=GOLD_DARK, height=1, corner_radius=0).pack(fill="x")
 
         # ── Paths ──
-        paths = ctk.CTkFrame(self, fg_color=BG_PANEL, corner_radius=8)
-        paths.pack(fill="x", padx=12, pady=(8, 4))
+        paths = ctk.CTkFrame(self, fg_color=BG_PANEL, corner_radius=10, border_width=1, border_color=BORDER)
+        paths.pack(fill="x", padx=14, pady=(10, 4))
         paths.grid_columnconfigure(1, weight=1)
 
         self._game_dir_var = ctk.StringVar()
@@ -233,22 +286,24 @@ class NWExtractorApp(ctk.CTk):
         scan_row.pack(fill="x", padx=12, pady=(2, 4))
 
         self._scan_btn = ctk.CTkButton(
-            scan_row, text="Scan Game Files", command=self._on_scan,
-            font=ctk.CTkFont(size=13, weight="bold"), height=36,
-            fg_color="#1F6FEB", hover_color="#388BFD", corner_radius=8,
+            scan_row, text="\u2726  Scan Game Files", command=self._on_scan,
+            font=ctk.CTkFont(family="Georgia", size=13, weight="bold"), height=38,
+            fg_color=BLUE_BTN, hover_color=BLUE_HOVER, corner_radius=8,
+            border_width=1, border_color="#3A6FBB",
         )
         self._scan_btn.pack(side="left", padx=(0, 8))
 
         self._stop_btn = ctk.CTkButton(
             scan_row, text="Stop", command=self._on_stop,
-            font=ctk.CTkFont(size=13), height=36,
-            fg_color="#8B0000", hover_color="#A52A2A", corner_radius=8,
+            font=ctk.CTkFont(size=13), height=38,
+            fg_color=RED, hover_color=RED_HOVER, corner_radius=8,
             state="disabled",
         )
         self._stop_btn.pack(side="left")
 
         # ── Filter panel (hidden until scan completes) ──
-        self._filter_panel = ctk.CTkFrame(self, fg_color=BG_PANEL, corner_radius=8)
+        self._filter_panel = ctk.CTkFrame(self, fg_color=BG_PANEL, corner_radius=10,
+                                           border_width=1, border_color=BORDER)
         # Don't pack yet — shown after scan
 
         # Filter row 1: cascading dropdowns
@@ -272,7 +327,7 @@ class NWExtractorApp(ctk.CTk):
                 font=ctk.CTkFont(size=12), height=32, width=160,
                 fg_color=BG_INPUT, button_color=ACCENT,
                 button_hover_color=ACCENT_HOVER,
-                dropdown_fg_color=BG_PANEL,
+                dropdown_fg_color=BG_PANEL_ALT,
                 command=lambda val, idx=i: self._on_filter_changed(idx),
                 state="disabled",
             )
@@ -320,10 +375,11 @@ class NWExtractorApp(ctk.CTk):
         self._results_label.pack(side="left", padx=(0, 10))
 
         self._extract_btn = ctk.CTkButton(
-            filter_row2, text="Extract These", command=self._on_extract,
-            font=ctk.CTkFont(size=13, weight="bold"), height=34,
-            fg_color=GREEN, hover_color="#3FB950", text_color="white",
+            filter_row2, text="\u2726  Extract These", command=self._on_extract,
+            font=ctk.CTkFont(family="Georgia", size=13, weight="bold"), height=36,
+            fg_color=GOLD_DARK, hover_color=GOLD_DIM, text_color=GOLD_BRIGHT,
             corner_radius=8, state="disabled",
+            border_width=1, border_color=GOLD,
         )
         self._extract_btn.pack(side="right")
 
@@ -387,27 +443,31 @@ class NWExtractorApp(ctk.CTk):
         main.grid_rowconfigure(0, weight=1)
 
         # Left: results tree
-        tree_panel = ctk.CTkFrame(main, fg_color=BG_PANEL, corner_radius=8)
-        tree_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
+        tree_panel = ctk.CTkFrame(main, fg_color=BG_PANEL, corner_radius=10,
+                                   border_width=1, border_color=BORDER)
+        tree_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
 
         tree_header_row = ctk.CTkFrame(tree_panel, fg_color="transparent")
         tree_header_row.pack(fill="x", padx=10, pady=(8, 4))
 
-        self._tree_header_var = ctk.StringVar(value="Scan game files to get started")
+        self._tree_header_var = ctk.StringVar(value="\u2726  Scan game files to browse assets")
         ctk.CTkLabel(tree_header_row, textvariable=self._tree_header_var,
-                     font=ctk.CTkFont(size=12, weight="bold"), text_color=TEXT_COLOR, anchor="w",
+                     font=ctk.CTkFont(family="Georgia", size=12, weight="bold"),
+                     text_color=GOLD, anchor="w",
                      ).pack(side="left")
 
         ctk.CTkButton(
             tree_header_row, text="Deselect All", command=self._tree_deselect_all, width=80,
-            font=ctk.CTkFont(size=11), height=24,
-            fg_color="#333", hover_color="#555", corner_radius=4,
+            font=ctk.CTkFont(size=10), height=24,
+            fg_color=BG_PANEL_ALT, hover_color=GOLD_DARK, corner_radius=4,
+            border_width=1, border_color=BORDER, text_color=TEXT_DIM,
         ).pack(side="right", padx=(4, 0))
 
         ctk.CTkButton(
             tree_header_row, text="Select All", command=self._tree_select_all, width=70,
-            font=ctk.CTkFont(size=11), height=24,
-            fg_color="#333", hover_color="#555", corner_radius=4,
+            font=ctk.CTkFont(size=10), height=24,
+            fg_color=BG_PANEL_ALT, hover_color=GOLD_DARK, corner_radius=4,
+            border_width=1, border_color=BORDER, text_color=TEXT_DIM,
         ).pack(side="right", padx=(4, 0))
 
         _configure_tree_style()
@@ -439,50 +499,64 @@ class NWExtractorApp(ctk.CTk):
         self._tree_populated: set[str] = set()
 
         # Right: log
-        log_panel = ctk.CTkFrame(main, fg_color=BG_PANEL, corner_radius=8)
+        log_panel = ctk.CTkFrame(main, fg_color=BG_PANEL, corner_radius=10,
+                                  border_width=1, border_color=BORDER)
         log_panel.grid(row=0, column=1, sticky="nsew")
 
         log_h = ctk.CTkFrame(log_panel, fg_color="transparent")
         log_h.pack(fill="x", padx=10, pady=(8, 2))
-        ctk.CTkLabel(log_h, text="Log", font=ctk.CTkFont(size=12, weight="bold"),
-                     text_color=TEXT_COLOR).pack(side="left")
-        ctk.CTkButton(log_h, text="Clear", command=self._clear_log, width=45,
+        ctk.CTkLabel(log_h, text="\u2726  Log",
+                     font=ctk.CTkFont(family="Georgia", size=12, weight="bold"),
+                     text_color=GOLD).pack(side="left")
+        ctk.CTkButton(log_h, text="Clear", command=self._clear_log, width=50,
                       font=ctk.CTkFont(size=10), height=22,
-                      fg_color="#333", hover_color="#555", corner_radius=4).pack(side="right")
+                      fg_color=BG_PANEL_ALT, hover_color=GOLD_DARK,
+                      border_width=1, border_color=BORDER,
+                      text_color=TEXT_DIM, corner_radius=4).pack(side="right")
 
         self._log_text = ctk.CTkTextbox(
             log_panel, font=ctk.CTkFont(family="Consolas", size=10),
-            fg_color=BG_LOG, text_color="#C9D1D9", corner_radius=6, wrap="word",
+            fg_color=BG_LOG, text_color=TEXT_COLOR, corner_radius=8, wrap="word",
+            border_width=1, border_color=BORDER,
         )
         self._log_text.pack(fill="both", expand=True, padx=6, pady=(0, 6))
 
         # ── Bottom: progress ──
-        bottom = ctk.CTkFrame(self, fg_color="transparent")
-        bottom.pack(fill="x", padx=12, pady=(0, 8))
+        # Gold line separator
+        ctk.CTkFrame(self, fg_color=GOLD_DARK, height=1, corner_radius=0).pack(fill="x", padx=14)
+
+        bottom = ctk.CTkFrame(self, fg_color=BG_HEADER)
+        bottom.pack(fill="x", padx=0, pady=0)
 
         self._progress_var = ctk.DoubleVar(value=0)
         ctk.CTkProgressBar(
             bottom, variable=self._progress_var,
-            progress_color=ACCENT, fg_color=BG_INPUT, height=6,
-        ).pack(fill="x", pady=(0, 2))
+            progress_color=GOLD, fg_color=BG_INPUT, height=4,
+            corner_radius=2,
+        ).pack(fill="x", padx=14, pady=(6, 2))
 
-        self._status_var = ctk.StringVar(value="Ready")
+        self._status_var = ctk.StringVar(value="\u2726 Ready")
         ctk.CTkLabel(bottom, textvariable=self._status_var,
-                     font=ctk.CTkFont(size=10), text_color=TEXT_DIM, anchor="w",
-                     ).pack(fill="x")
+                     font=ctk.CTkFont(size=10), text_color=GOLD_DIM, anchor="w",
+                     ).pack(fill="x", padx=14, pady=(0, 6))
 
     # ── Helpers ──
 
     def _add_path_row(self, parent, label, var, browse_fn, row):
-        ctk.CTkLabel(parent, text=f"{label}:", font=ctk.CTkFont(size=11),
-                     anchor="e", width=110,
-                     ).grid(row=row, column=0, padx=(10, 4), pady=5, sticky="e")
-        ctk.CTkEntry(parent, textvariable=var, fg_color=BG_INPUT, border_color=ACCENT,
-                     ).grid(row=row, column=1, padx=4, pady=5, sticky="ew")
-        ctk.CTkButton(parent, text="Browse", command=browse_fn, width=65,
-                      fg_color="#333", hover_color="#555", corner_radius=6,
-                      font=ctk.CTkFont(size=11),
-                      ).grid(row=row, column=2, padx=(4, 10), pady=5)
+        ctk.CTkLabel(parent, text=f"{label}:",
+                     font=ctk.CTkFont(family="Georgia", size=11),
+                     text_color=GOLD_DIM, anchor="e", width=120,
+                     ).grid(row=row, column=0, padx=(12, 4), pady=6, sticky="e")
+        ctk.CTkEntry(parent, textvariable=var,
+                     fg_color=BG_INPUT, border_color=BORDER,
+                     font=ctk.CTkFont(size=11),
+                     ).grid(row=row, column=1, padx=4, pady=6, sticky="ew")
+        ctk.CTkButton(parent, text="Browse", command=browse_fn, width=70,
+                      fg_color=BG_PANEL_ALT, hover_color=GOLD_DARK,
+                      border_width=1, border_color=BORDER,
+                      corner_radius=6, font=ctk.CTkFont(size=11),
+                      text_color=TEXT_COLOR,
+                      ).grid(row=row, column=2, padx=(4, 12), pady=6)
 
     def _browse_game_dir(self):
         path = filedialog.askdirectory(title="Select New World Game Directory")
