@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nwextractor"
+version = "0.1.0"
+description = "Extract and convert New World game assets for UE5 import"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Chris971991"},
+]
+
+dependencies = [
+    "click>=8.0",
+    "Pillow>=10.0",
+    "customtkinter>=5.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+nwextractor = "nwextractor.cli:main"
+
+[project.gui-scripts]
+nwextractor-gui = "nwextractor.gui:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"

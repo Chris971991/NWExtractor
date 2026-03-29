@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Extracted game files
+extracted/
+
+# Oodle DLL (proprietary, do not commit)
+oo2core_*.dll
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Claude
+CLAUDE.md
+nul
