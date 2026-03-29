@@ -39,6 +39,7 @@ ASSET_CATEGORIES: dict[str, tuple[str, str]] = {
     ".cry": ("Levels", "CRY (Level)"),
     ".lyr": ("Levels", "LYR (Layer)"),
     ".vegmap": ("Levels", "VEGMAP (Vegetation)"),
+    ".entities_xml": ("Levels", "Entity Placements"),
     # Data
     ".json": ("Data", "JSON"),
     ".xml": ("Data", "XML"),

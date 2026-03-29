@@ -956,6 +956,7 @@ class NWExtractorApp(ctk.CTk):
             anim_files: list[Path] = []   # Track animation files for phase 4
             mtl_files: list[Path] = []    # Track material files for phase 5
             heightmap_files: list[Path] = []  # Track heightmaps for phase 6
+            entity_files: list[Path] = []     # Track entity placement files
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -1010,6 +1011,8 @@ class NWExtractorApp(ctk.CTk):
                         mtl_files.append(out_path)
                     elif out_path.suffix.lower() == ".heightmap":
                         heightmap_files.append(out_path)
+                    elif out_path.name == "mission0.entities_xml":
+                        entity_files.append(out_path)
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1155,6 +1158,23 @@ class NWExtractorApp(ctk.CTk):
                     except Exception as e:
                         self._log(f"  HEIGHTMAP FAIL {hm_path.name}: {e}")
                 self._log(f"Converted {hm_converted:,}/{len(heightmap_files):,} heightmaps to R16")
+
+            # --- Phase 7: Convert entity placements to CSV/JSON ---
+            if entity_files and not self._stop_requested:
+                from nwextractor.convert.levels import convert_level_entities
+                self._log(f"\n--- Phase 7: Converting {len(entity_files)} entity placement files ---")
+                ent_converted = 0
+                for ent_path in entity_files:
+                    if self._stop_requested:
+                        break
+                    try:
+                        result = convert_level_entities(ent_path, ent_path.parent)
+                        if result:
+                            ent_converted += 1
+                            self._log(f"  {ent_path.parent.name}: {result.name}")
+                    except Exception as e:
+                        self._log(f"  ENTITY FAIL {ent_path.name}: {e}")
+                self._log(f"Converted {ent_converted:,}/{len(entity_files):,} entity files to CSV+JSON")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")

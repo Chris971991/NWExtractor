@@ -129,7 +129,7 @@ Levels     → Dungeons, Arenas, Raids (via sharedassets)
 - [x] CAF → GLB animation conversion (rotation + position keyframes)
 - [x] MTL → UE5 material JSON manifests (texture slots, PBR properties)
 - [x] Heightmap conversion for UE5 Landscape (TIFF → R16/PNG)
-- [ ] Level/map entity placement export
+- [x] Level entity placement export (CSV + JSON with transforms)
 
 ## Credits
 
