@@ -954,6 +954,7 @@ class NWExtractorApp(ctk.CTk):
             dds_headers: list[Path] = []  # Track DDS files for phase 2
             model_files: list[Path] = []  # Track model files for phase 3
             anim_files: list[Path] = []   # Track animation files for phase 4
+            mtl_files: list[Path] = []    # Track material files for phase 5
 
             for pak_str, files_in_pak in by_pak.items():
                 if self._stop_requested:
@@ -1004,6 +1005,8 @@ class NWExtractorApp(ctk.CTk):
                         model_files.append(out_path)
                     elif convert_models and out_path.suffix.lower() == ".caf":
                         anim_files.append(out_path)
+                    elif convert_models and out_path.suffix.lower() == ".mtl":
+                        mtl_files.append(out_path)
 
             # --- Phase 2: Extract mips and convert textures ---
             if convert_dds and dds_headers and not self._stop_requested:
@@ -1117,6 +1120,22 @@ class NWExtractorApp(ctk.CTk):
                     except Exception as e:
                         self._log(f"  ANIM FAIL {anim_path.name}: {e}")
                 self._log(f"Converted {anims_converted:,}/{len(anim_files):,} animations to GLB")
+
+            # --- Phase 5: Convert materials to UE5 JSON ---
+            if convert_models and mtl_files and not self._stop_requested:
+                from nwextractor.convert.materials import convert_material
+                self._log(f"\n--- Phase 5: Converting {len(mtl_files)} materials ---")
+                mtls_converted = 0
+                for i, mtl_path in enumerate(mtl_files):
+                    if self._stop_requested:
+                        break
+                    try:
+                        result = convert_material(mtl_path, mtl_path.parent)
+                        if result:
+                            mtls_converted += 1
+                    except Exception as e:
+                        self._log(f"  MTL FAIL {mtl_path.name}: {e}")
+                self._log(f"Converted {mtls_converted:,}/{len(mtl_files):,} materials to JSON")
 
             self._set_progress(1.0)
             self._log(f"\nDone! Extracted {done - errors:,} files ({errors} errors)")

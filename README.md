@@ -91,7 +91,7 @@ If auto-detection fails, copy `oo2core_9_win64.dll` from any UE5-based game into
 | Normal Maps | `.dds` (auto-detected by `_ddna`, `_normal` suffix) | TGA |
 | Models | `.cgf`, `.cga`, `.skin`, `.chr` | GLB (glTF binary) or OBJ |
 | Animations | `.caf`, `.anm` | GLB (glTF binary with keyframes) |
-| Materials | `.mtl` (XML) | *Coming soon — UE5 JSON* |
+| Materials | `.mtl` (XML) | JSON manifest (UE5 material setup) |
 | Audio | `.wem`, `.bnk` | Raw extraction |
 | Heightmaps | `.heightmap` | Raw extraction |
 
@@ -127,7 +127,7 @@ Levels     → Dungeons, Arenas, Raids (via sharedassets)
 - [x] CGF/CGA/SKIN → OBJ model conversion (static meshes)
 - [x] CGF/SKIN → GLB model conversion (skeletal meshes with bone weights)
 - [x] CAF → GLB animation conversion (rotation + position keyframes)
-- [ ] MTL → UE5 material instance generation
+- [x] MTL → UE5 material JSON manifests (texture slots, PBR properties)
 - [ ] Level/map entity placement export
 - [ ] Heightmap conversion for UE5 Landscape
 
