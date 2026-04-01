@@ -106,6 +106,7 @@ class BoneWeight:
 class Bone:
     name: str = ""
     parent_index: int = -1
+    controller_id: int = 0  # CRC32 used to match animations
     position: Vec3 = field(default_factory=Vec3)
     rotation: tuple = (0.0, 0.0, 0.0, 1.0)  # quaternion (x, y, z, w)
 
@@ -427,6 +428,7 @@ class CgfParser:
                             valid = False
                             break
                         bone = Bone()
+                        bone.controller_id = self._u32(p)  # First u32 = controller ID
                         bone.name = name
                         bone.parent_index = self._i32(p + 4)
                         test_bones.append(bone)

@@ -428,7 +428,7 @@ class NWExtractorApp(ctk.CTk):
         self._model_format_var = ctk.StringVar(value="GLB")
         ctk.CTkOptionMenu(
             filter_row3, variable=self._model_format_var,
-            values=["GLB", "OBJ"],
+            values=["FBX", "GLB", "OBJ"],
             font=ctk.CTkFont(size=11), height=28, width=80,
             fg_color=BG_INPUT, button_color=ACCENT,
             button_hover_color=ACCENT_HOVER,
@@ -1256,6 +1256,11 @@ class NWExtractorApp(ctk.CTk):
             # --- Phase 4: Convert models ---
             if convert_models and model_files and not self._stop_requested:
                 model_fmt = self._model_format_var.get()
+                if model_fmt == "FBX":
+                    from nwextractor.convert.fbx_convert import find_blender
+                    if not find_blender():
+                        self._log("\nNote: FBX requires Blender installed. Falling back to GLB.")
+                        self._log("  GLB imports into both Blender and UE5 natively.")
                 self._log(f"\n--- Phase 4: Converting {len(model_files)} models to {model_fmt} ---")
                 models_converted = 0
                 for i, model_path in enumerate(model_files):
@@ -1280,7 +1285,8 @@ class NWExtractorApp(ctk.CTk):
                         break
                     self._set_status(f"Converting animation {i+1:,}/{len(anim_files):,}")
                     try:
-                        result = convert_animation(anim_path, anim_path.parent)
+                        model_fmt = self._model_format_var.get().lower()
+                        result = convert_animation(anim_path, anim_path.parent, output_format=model_fmt)
                         if result:
                             anims_converted += 1
                     except Exception as e:

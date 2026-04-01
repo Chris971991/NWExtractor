@@ -273,11 +273,20 @@ def export_glb(cgf: CgfFile, out_path: Path) -> Path | None:
     return out_path
 
 
-def export_animation_glb(anim: CafAnimation, out_path: Path) -> Path | None:
-    """Export a standalone CAF animation to GLB.
+def export_animation_glb(anim: CafAnimation, out_path: Path,
+                         bone_name_map: dict[int, str] | None = None,
+                         bones: list | None = None) -> Path | None:
+    """Export a CAF animation to GLB with proper bone names.
 
-    Creates a skeleton-only GLB with animation tracks.
-    Can be imported into UE5 and retargeted to a matching skeleton.
+    Args:
+        anim: Parsed animation data.
+        out_path: Output .glb file path.
+        bone_name_map: Optional dict mapping controller_id → bone_name.
+                       Built from the skeleton's CompiledBones chunk.
+        bones: Optional list of Bone objects from the skeleton for hierarchy.
+
+    If bone_name_map is provided, animation tracks use real bone names
+    that match the skeletal mesh GLB, allowing UE5 to link them.
     """
     if not anim.tracks:
         return None
@@ -288,14 +297,43 @@ def export_animation_glb(anim: CafAnimation, out_path: Path) -> Path | None:
     gltf.scene = 0
     bin_data = bytearray()
 
-    # Create a node for each bone track (using controller_id as name)
-    gltf.nodes = [Node(name="root")]
-    track_node_map: dict[int, int] = {}  # controller_id → node index
+    # Build bone nodes — use real names from skeleton if available
+    if bones and bone_name_map:
+        # Build full skeleton hierarchy with correct names
+        gltf.nodes = [Node(name="Armature")]
+        track_node_map: dict[int, int] = {}
 
-    for track in anim.tracks:
-        node_idx = len(gltf.nodes)
-        track_node_map[track.controller_id] = node_idx
-        gltf.nodes.append(Node(name=f"bone_{track.controller_id:08x}"))
+        for bone in bones:
+            node_idx = len(gltf.nodes)
+            track_node_map[bone.controller_id] = node_idx
+            gltf.nodes.append(Node(name=bone.name))
+
+        # Set up parent-child from skeleton hierarchy
+        root_joints = []
+        for i, bone in enumerate(bones):
+            node_idx = track_node_map[bone.controller_id]
+            if bone.parent_index < 0 or bone.parent_index >= len(bones):
+                root_joints.append(node_idx)
+            else:
+                parent_bone = bones[bone.parent_index]
+                parent_node_idx = track_node_map.get(parent_bone.controller_id)
+                if parent_node_idx is not None:
+                    if gltf.nodes[parent_node_idx].children is None:
+                        gltf.nodes[parent_node_idx].children = []
+                    gltf.nodes[parent_node_idx].children.append(node_idx)
+                else:
+                    root_joints.append(node_idx)
+
+        gltf.nodes[0].children = root_joints
+    else:
+        # Fallback: use controller IDs as names
+        gltf.nodes = [Node(name="Armature")]
+        track_node_map = {}
+        for track in anim.tracks:
+            node_idx = len(gltf.nodes)
+            track_node_map[track.controller_id] = node_idx
+            name = bone_name_map.get(track.controller_id, f"bone_{track.controller_id:08x}") if bone_name_map else f"bone_{track.controller_id:08x}"
+            gltf.nodes.append(Node(name=name))
 
     # Make all bone nodes children of root
     gltf.nodes[0].children = list(range(1, len(gltf.nodes)))

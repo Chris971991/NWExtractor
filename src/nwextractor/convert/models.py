@@ -30,7 +30,19 @@ def convert_model(src: Path, dst_dir: Path, output_format: str = "glb") -> Path 
 
     dst_dir.mkdir(parents=True, exist_ok=True)
 
-    if output_format == "glb":
+    if output_format == "fbx":
+        # Export GLB first, then convert to FBX via Blender
+        from nwextractor.convert.gltf_export import export_glb
+        from nwextractor.convert.fbx_convert import convert_glb_to_fbx, find_blender
+        glb_path = dst_dir / src.with_suffix(".glb").name
+        result = export_glb(cgf, glb_path)
+        if result and find_blender():
+            fbx_path = convert_glb_to_fbx(glb_path)
+            if fbx_path:
+                glb_path.unlink(missing_ok=True)  # Clean up intermediate GLB
+                return fbx_path
+        return result  # Fall back to GLB if Blender not available
+    elif output_format == "glb":
         from nwextractor.convert.gltf_export import export_glb
         out_path = dst_dir / src.with_suffix(".glb").name
         return export_glb(cgf, out_path)
@@ -165,8 +177,13 @@ def batch_convert_models(
     return converted, errors
 
 
-def convert_animation(src: Path, dst_dir: Path) -> Path | None:
-    """Convert a CAF animation file to GLB."""
+def convert_animation(src: Path, dst_dir: Path, output_format: str = "glb") -> Path | None:
+    """Convert a CAF animation file to GLB or FBX with proper bone names.
+
+    Searches for a matching skeleton (.skin/.chr) nearby to get the
+    controller_id → bone_name mapping. This ensures the animation's bone
+    names match the skeletal mesh for UE5 import.
+    """
     from nwextractor.convert.caf_parser import CafParser
     from nwextractor.convert.gltf_export import export_animation_glb
 
@@ -178,6 +195,51 @@ def convert_animation(src: Path, dst_dir: Path) -> Path | None:
     if not anim.tracks:
         return None
 
+    # Find matching skeleton to get bone names
+    bone_name_map, bones = _find_skeleton_for_animation(src)
+
     dst_dir.mkdir(parents=True, exist_ok=True)
-    out_path = dst_dir / src.with_suffix(".glb").name
-    return export_animation_glb(anim, out_path)
+    glb_path = dst_dir / src.with_suffix(".glb").name
+    result = export_animation_glb(anim, glb_path, bone_name_map=bone_name_map, bones=bones)
+
+    if result and output_format == "fbx":
+        from nwextractor.convert.fbx_convert import convert_glb_to_fbx, find_blender
+        if find_blender():
+            fbx_path = convert_glb_to_fbx(glb_path)
+            if fbx_path:
+                glb_path.unlink(missing_ok=True)
+                return fbx_path
+
+    return result
+
+
+def _find_skeleton_for_animation(caf_path: Path) -> tuple[dict[int, str] | None, list | None]:
+    """Search for a skeleton file near the animation to get bone name mapping.
+
+    Looks for .skin/.chr files in the same directory, parent directories,
+    or sibling directories to build a controller_id → bone_name map.
+    """
+    search_dirs = [
+        caf_path.parent,
+        caf_path.parent.parent,
+    ]
+    # Also check sibling directories
+    if caf_path.parent.parent.exists():
+        for sibling in caf_path.parent.parent.iterdir():
+            if sibling.is_dir() and sibling != caf_path.parent:
+                search_dirs.append(sibling)
+
+    for search_dir in search_dirs:
+        if not search_dir.exists():
+            continue
+        for ext in ("*.skin", "*.chr"):
+            for skel_file in search_dir.glob(ext):
+                try:
+                    cgf = CgfParser.from_file(skel_file)
+                    if cgf.bones:
+                        bone_map = {b.controller_id: b.name for b in cgf.bones}
+                        return bone_map, cgf.bones
+                except Exception:
+                    continue
+
+    return None, None
